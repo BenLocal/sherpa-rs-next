@@ -1,6 +1,7 @@
 /target
 
 sherpa-onnx-*
+/sherpa-onnx
 
 
 /examples/target
