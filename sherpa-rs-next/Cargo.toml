@@ -1,0 +1,8 @@
+[package]
+name = "sherpa-rs-next"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+sherpa-rs-sys = { git = "https://github.com/BenLocal/sherpa-rs.git", branch = "for-next", default-features = false }

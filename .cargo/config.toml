@@ -1,0 +1,3 @@
+[env]
+SHERPA_LIB_PATH = { value = "sherpa-onnx-v1.12.20-linux-x64-shared", relative = true }
+SHERPA_INCLUDE_PATH = { value = "sherpa-onnx-v1.12.20-linux-x64-shared/include/sherpa-onnx/c-api", relative = true }
