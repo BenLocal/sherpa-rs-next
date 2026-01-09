@@ -1,34 +1,36 @@
+use std::ffi::CString;
+
+use crate::as_c_string;
+
 pub mod silero;
 pub mod ten;
 
-#[macro_export]
-macro_rules! delegate_method {
-    ($method_name:ident, $param_type:ty) => {
-        paste::paste! {
-            pub fn [<with_ $method_name>](&mut self, param: $param_type) -> &mut Self {
-                self.base.[<with_ $method_name>](param);
-                self
-            }
-        }
-    };
-}
-
 #[derive(Debug, Default)]
-pub struct VadBaseConfig(sherpa_rs_sys::SherpaOnnxVadModelConfig);
+pub struct VadBaseConfig {
+    config: sherpa_rs_sys::SherpaOnnxVadModelConfig,
+    provider: Option<CString>,
+}
 
 impl VadBaseConfig {
     pub fn with_debug(&mut self, debug: bool) -> &mut Self {
-        self.0.debug = debug as i32;
+        self.config.debug = debug as i32;
         self
     }
 
     pub fn with_sample_rate(&mut self, sample_rate: i32) -> &mut Self {
-        self.0.sample_rate = sample_rate;
+        self.config.sample_rate = sample_rate;
         self
     }
 
     pub fn with_num_threads(&mut self, num_threads: i32) -> &mut Self {
-        self.0.num_threads = num_threads;
+        self.config.num_threads = num_threads;
+        self
+    }
+
+    pub fn with_provider(&mut self, provider: &str) -> &mut Self {
+        let provider = as_c_string!(provider);
+        self.config.provider = provider.as_ptr();
+        self.provider = Some(provider);
         self
     }
 }

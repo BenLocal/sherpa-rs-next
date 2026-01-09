@@ -11,33 +11,33 @@ pub struct SileroVadConfig {
 impl SileroVadConfig {
     pub fn with_model(&mut self, model: &str) -> &mut Self {
         let model = as_c_string!(model);
-        self.base.0.ten_vad.model = model.as_ptr();
+        self.base.config.ten_vad.model = model.as_ptr();
         self.model = Some(model);
         self
     }
 
     pub fn with_threshold(&mut self, threshold: f32) -> &mut Self {
-        self.base.0.ten_vad.threshold = threshold;
+        self.base.config.ten_vad.threshold = threshold;
         self
     }
 
     pub fn with_min_silence_duration(&mut self, min_silence_duration: f32) -> &mut Self {
-        self.base.0.ten_vad.min_silence_duration = min_silence_duration;
+        self.base.config.ten_vad.min_silence_duration = min_silence_duration;
         self
     }
 
     pub fn with_min_speech_duration(&mut self, min_speech_duration: f32) -> &mut Self {
-        self.base.0.ten_vad.min_speech_duration = min_speech_duration;
+        self.base.config.ten_vad.min_speech_duration = min_speech_duration;
         self
     }
 
     pub fn with_max_speech_duration(&mut self, max_speech_duration: f32) -> &mut Self {
-        self.base.0.ten_vad.max_speech_duration = max_speech_duration;
+        self.base.config.ten_vad.max_speech_duration = max_speech_duration;
         self
     }
 
     pub fn with_window_size(&mut self, window_size: i32) -> &mut Self {
-        self.base.0.ten_vad.window_size = window_size;
+        self.base.config.ten_vad.window_size = window_size;
         self
     }
 }
@@ -46,6 +46,7 @@ impl SileroVadConfig {
     crate::delegate_method!(debug, bool);
     crate::delegate_method!(sample_rate, i32);
     crate::delegate_method!(num_threads, i32);
+    crate::delegate_method!(provider, &str);
 }
 
 impl Default for SileroVadConfig {
@@ -59,7 +60,7 @@ impl Default for SileroVadConfig {
 
 impl AsRef<sherpa_rs_sys::SherpaOnnxVadModelConfig> for SileroVadConfig {
     fn as_ref(&self) -> &sherpa_rs_sys::SherpaOnnxVadModelConfig {
-        &self.base.0
+        &self.base.config
     }
 }
 
