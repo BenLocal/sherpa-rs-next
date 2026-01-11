@@ -4,6 +4,39 @@ use std::ffi::CString;
 use crate::{as_c_string, asr::RecognizerJsonResult, const_ptr_to_string};
 
 pub mod paraformer;
+pub mod sense_voice;
+
+pub type AsrOfflineConfig = Box<dyn AsRef<sherpa_rs_sys::SherpaOnnxOfflineRecognizerConfig>>;
+
+#[macro_export]
+macro_rules! delegate_all_base_config_methods {
+    ($config_type:ident) => {
+        impl $config_type {
+            $crate::delegate_method!(decoding_method, &str);
+            $crate::delegate_method!(max_active_paths, i32);
+            $crate::delegate_method!(hotwords_file, &str);
+            $crate::delegate_method!(hotwords_score, f32);
+            $crate::delegate_method!(rule_fsts, &str);
+            $crate::delegate_method!(rule_fars, &str);
+            $crate::delegate_method!(blank_penalty, f32);
+            $crate::delegate_method!(hr_dict_dir, &str);
+            $crate::delegate_method!(hr_lexicon, &str);
+            $crate::delegate_method!(hr_rule_fsts, &str);
+            $crate::delegate_method!(lm_model, &str);
+            $crate::delegate_method!(lm_scale, f32);
+            $crate::delegate_method!(feat_sample_rate, i32);
+            $crate::delegate_method!(feat_feature_dim, i32);
+            $crate::delegate_method!(model_debug, bool);
+            $crate::delegate_method!(model_num_threads, i32);
+            $crate::delegate_method!(model_provider, &str);
+            $crate::delegate_method!(model_type, &str);
+            $crate::delegate_method!(model_modeling_unit, &str);
+            $crate::delegate_method!(model_bpe_vocab, &str);
+            $crate::delegate_method!(model_telespeech_ctc, &str);
+            $crate::delegate_method!(model_tokens, &str);
+        }
+    };
+}
 
 #[derive(Debug, Default)]
 pub struct AsrOfflineBaseConfig {
@@ -168,66 +201,70 @@ impl AsrOfflineBaseConfig {
 }
 
 pub struct AsrOfflineResult {
-    result: sherpa_rs_sys::SherpaOnnxOfflineRecognizerResult,
-    json_cache: OnceCell<anyhow::Result<RecognizerJsonResult>>,
-    tokens_cache: OnceCell<Vec<String>>,
+    json_value_cache: OnceCell<anyhow::Result<RecognizerJsonResult>>,
+    tokens: Vec<String>,
+    text: String,
+    lang: String,
+    timestamps: Vec<f32>,
+    json: String,
 }
 
 impl AsrOfflineResult {
-    pub fn new(result: sherpa_rs_sys::SherpaOnnxOfflineRecognizerResult) -> Self {
-        Self {
-            result,
-            json_cache: OnceCell::new(),
-            tokens_cache: OnceCell::new(),
-        }
+    pub fn text(&self) -> &str {
+        &self.text
     }
 
-    pub fn text(&self) -> String {
-        let text = self.result.text;
-        const_ptr_to_string!(text, "".to_string())
+    pub fn timestamps(&self) -> &Vec<f32> {
+        &self.timestamps
     }
 
-    pub fn timestamps(&self) -> Vec<f32> {
-        let timestamps = self.result.timestamps;
-        unsafe { std::slice::from_raw_parts(timestamps, self.result.count as usize).to_vec() }
-    }
-
-    pub fn lang(&self) -> String {
-        let lang = self.result.lang;
-        const_ptr_to_string!(lang, "".to_string())
+    pub fn lang(&self) -> &str {
+        &self.lang
     }
 
     pub fn tokens(&self) -> &Vec<String> {
-        let cached = self.tokens_cache.get_or_init(|| {
-            let mut tokens = Vec::with_capacity(self.result.count as usize);
-            let mut next_token: *const i8 = self.result.tokens;
-            for _ in 0..self.result.count {
-                let token = unsafe { std::ffi::CStr::from_ptr(next_token) };
-                tokens.push(token.to_string_lossy().into_owned());
-                next_token = next_token
-                    .wrapping_byte_offset(token.to_bytes_with_nul().len().try_into().unwrap());
-            }
-            tokens
-        });
-
-        cached
+        &self.tokens
     }
 
     pub fn json(&self) -> &anyhow::Result<RecognizerJsonResult> {
-        let cached = self.json_cache.get_or_init(|| {
-            let json_ptr = self.result.json;
-            let s = const_ptr_to_string!(json_ptr, "".to_string());
-            serde_json::from_str(&s).map_err(|e| anyhow::anyhow!("Failed to parse json: {}", e))
+        let cached = self.json_value_cache.get_or_init(|| {
+            serde_json::from_str(&self.json)
+                .map_err(|e| anyhow::anyhow!("Failed to parse json: {}", e))
         });
 
         cached
     }
 }
 
-impl Drop for AsrOfflineResult {
-    fn drop(&mut self) {
-        unsafe {
-            sherpa_rs_sys::SherpaOnnxDestroyOfflineRecognizerResult(&self.result);
+impl From<sherpa_rs_sys::SherpaOnnxOfflineRecognizerResult> for AsrOfflineResult {
+    fn from(result: sherpa_rs_sys::SherpaOnnxOfflineRecognizerResult) -> Self {
+        let text_owned = const_ptr_to_string!(result.text, "".to_string());
+        let lang_owned = const_ptr_to_string!(result.lang, "".to_string());
+        let json_owned = const_ptr_to_string!(result.json, "".to_string());
+        let timestamps_owned = if result.timestamps.is_null() || result.count == 0 {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(result.timestamps, result.count as usize).to_vec() }
+        };
+
+        let mut tokens_owned = Vec::with_capacity(result.count as usize);
+        if !result.tokens.is_null() && result.count > 0 {
+            let mut next_token: *const i8 = result.tokens;
+            for _ in 0..result.count {
+                let token = unsafe { std::ffi::CStr::from_ptr(next_token) };
+                tokens_owned.push(token.to_string_lossy().into_owned());
+                next_token = next_token
+                    .wrapping_byte_offset(token.to_bytes_with_nul().len().try_into().unwrap());
+            }
+        }
+
+        Self {
+            json_value_cache: OnceCell::new(),
+            tokens: tokens_owned,
+            text: text_owned,
+            lang: lang_owned,
+            timestamps: timestamps_owned,
+            json: json_owned,
         }
     }
 }
@@ -235,6 +272,13 @@ impl Drop for AsrOfflineResult {
 pub struct AsrOfflineRecognizer(*const sherpa_rs_sys::SherpaOnnxOfflineRecognizer);
 
 impl AsrOfflineRecognizer {
+    pub fn create_with_config(config: AsrOfflineConfig) -> anyhow::Result<Self> {
+        let config_ptr: *const sherpa_rs_sys::SherpaOnnxOfflineRecognizerConfig =
+            (*config).as_ref();
+        let recognizer = unsafe { sherpa_rs_sys::SherpaOnnxCreateOfflineRecognizer(config_ptr) };
+        Ok(Self(recognizer))
+    }
+
     pub fn create<T>(config: T) -> anyhow::Result<Self>
     where
         T: AsRef<sherpa_rs_sys::SherpaOnnxOfflineRecognizerConfig>,
@@ -245,7 +289,7 @@ impl AsrOfflineRecognizer {
     }
 
     pub fn transcribe(
-        &mut self,
+        &self,
         sample_rate: u32,
         samples: &[f32],
     ) -> anyhow::Result<AsrOfflineResult> {
@@ -260,13 +304,13 @@ impl AsrOfflineRecognizer {
             sherpa_rs_sys::SherpaOnnxDecodeOfflineStream(self.0, stream);
             let result_ptr = sherpa_rs_sys::SherpaOnnxGetOfflineStreamResult(stream);
             if result_ptr.is_null() {
+                sherpa_rs_sys::SherpaOnnxDestroyOfflineStream(stream);
                 return Err(anyhow::anyhow!("Failed to get offline stream result"));
             }
             let raw_result = result_ptr.read();
-            let result = AsrOfflineResult::new(raw_result);
-
+            let result = AsrOfflineResult::from(raw_result);
+            sherpa_rs_sys::SherpaOnnxDestroyOfflineRecognizerResult(result_ptr);
             sherpa_rs_sys::SherpaOnnxDestroyOfflineStream(stream);
-
             Ok(result)
         }
     }

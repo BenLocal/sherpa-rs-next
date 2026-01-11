@@ -5,3 +5,5 @@ sherpa-onnx-*
 
 
 /examples/target
+
+*.wav

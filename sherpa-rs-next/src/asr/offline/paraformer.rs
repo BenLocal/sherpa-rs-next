@@ -2,35 +2,13 @@ use std::ffi::CString;
 
 use crate::{as_c_string, asr::offline::AsrOfflineBaseConfig};
 
+#[derive(Debug, Default)]
 pub struct ParaformerAsrOfflineConfig {
     base: AsrOfflineBaseConfig,
     model: Option<CString>,
 }
 
-impl ParaformerAsrOfflineConfig {
-    crate::delegate_method!(decoding_method, &str);
-    crate::delegate_method!(max_active_paths, i32);
-    crate::delegate_method!(hotwords_file, &str);
-    crate::delegate_method!(hotwords_score, f32);
-    crate::delegate_method!(rule_fsts, &str);
-    crate::delegate_method!(rule_fars, &str);
-    crate::delegate_method!(blank_penalty, f32);
-    crate::delegate_method!(hr_dict_dir, &str);
-    crate::delegate_method!(hr_lexicon, &str);
-    crate::delegate_method!(hr_rule_fsts, &str);
-    crate::delegate_method!(lm_model, &str);
-    crate::delegate_method!(lm_scale, f32);
-    crate::delegate_method!(feat_sample_rate, i32);
-    crate::delegate_method!(feat_feature_dim, i32);
-    crate::delegate_method!(model_debug, bool);
-    crate::delegate_method!(model_num_threads, i32);
-    crate::delegate_method!(model_provider, &str);
-    crate::delegate_method!(model_type, &str);
-    crate::delegate_method!(model_modeling_unit, &str);
-    crate::delegate_method!(model_bpe_vocab, &str);
-    crate::delegate_method!(model_telespeech_ctc, &str);
-    crate::delegate_method!(model_tokens, &str);
-}
+crate::delegate_all_base_config_methods!(ParaformerAsrOfflineConfig);
 
 impl ParaformerAsrOfflineConfig {
     pub fn with_model(&mut self, model: &str) -> &mut Self {
@@ -38,15 +16,6 @@ impl ParaformerAsrOfflineConfig {
         self.base.config.model_config.paraformer.model = model.as_ptr();
         self.model = Some(model);
         self
-    }
-}
-
-impl Default for ParaformerAsrOfflineConfig {
-    fn default() -> Self {
-        Self {
-            base: AsrOfflineBaseConfig::default(),
-            model: None,
-        }
     }
 }
 

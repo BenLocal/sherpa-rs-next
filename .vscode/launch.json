@@ -1,0 +1,55 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug unit tests in library 'sherpa_rs_next'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--package=sherpa-rs-next"
+                ]
+            }
+        },
+        {
+            "name": "Debug executable 'asr-demo'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=asr-demo",
+                    "--package=asr-demo"
+                ]
+            },
+            "args": [
+                "sense_voice",
+                "${workspaceFolder}/motivation.wav",
+                "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx",
+                "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt"
+            ]
+            // "args": [
+            //     "paraformer",
+            //     "${workspaceFolder}/motivation.wav",
+            //     "${workspaceFolder}/sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx",
+            //     "${workspaceFolder}/sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt"
+            // ]
+        },
+        {
+            "name": "Debug unit tests in executable 'asr-demo'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=asr-demo",
+                    "--package=asr-demo"
+                ]
+            }
+        }
+    ]
+}
