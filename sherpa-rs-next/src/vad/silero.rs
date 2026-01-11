@@ -2,7 +2,7 @@ use std::ffi::CString;
 
 use crate::{as_c_string, vad::VadBaseConfig};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SileroVadConfig {
     base: VadBaseConfig,
     model: Option<CString>,
@@ -47,15 +47,6 @@ impl SileroVadConfig {
     crate::delegate_method!(sample_rate, i32);
     crate::delegate_method!(num_threads, i32);
     crate::delegate_method!(provider, &str);
-}
-
-impl Default for SileroVadConfig {
-    fn default() -> Self {
-        Self {
-            base: VadBaseConfig::default(),
-            model: None,
-        }
-    }
 }
 
 impl AsRef<sherpa_rs_sys::SherpaOnnxVadModelConfig> for SileroVadConfig {

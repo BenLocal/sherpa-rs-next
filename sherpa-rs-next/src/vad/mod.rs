@@ -13,7 +13,7 @@ pub struct VadBaseConfig {
 
 impl VadBaseConfig {
     pub fn with_debug(&mut self, debug: bool) -> &mut Self {
-        self.config.debug = debug as i32;
+        self.config.debug = if debug { 1 } else { 0 };
         self
     }
 

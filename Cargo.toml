@@ -1,5 +1,3 @@
 [workspace]
 members = ["sherpa-rs-next", "examples/*"]
 resolver = "2"
-
-

@@ -20,10 +20,25 @@ macro_rules! const_ptr_to_string {
         unsafe { std::ffi::CStr::from_ptr($a).to_string_lossy().into_owned() }
     };
     ($a:ident, $def:literal) => {
-        Ok(std::ffi::CStr::from_ptr(schema)
-            .to_str()
-            .map_or($def, |x| x))
+        if $a.is_null() {
+            $def
+        } else {
+            unsafe { std::ffi::CStr::from_ptr($a).to_string_lossy().into_owned() }
+        }
     };
+    ($a:expr, $def:expr) => {{
+        let ptr: *const i8 = $a as *const i8;
+        if ptr.is_null() {
+            $def
+        } else {
+            unsafe {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|_| $def)
+            }
+        }
+    }};
 }
 
 #[macro_export]
