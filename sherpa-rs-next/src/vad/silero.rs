@@ -1,9 +1,12 @@
 use std::ffi::CString;
 
+use sherpa_rs_next_macro::FromBaseConfig;
+
 use crate::{as_c_string, vad::VadBaseConfig};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FromBaseConfig)]
 pub struct SileroVadConfig {
+    #[base_config(path = "src/vad/mod.rs")]
     base: VadBaseConfig,
     model: Option<CString>,
 }
@@ -40,13 +43,6 @@ impl SileroVadConfig {
         self.base.config.ten_vad.window_size = window_size;
         self
     }
-}
-
-impl SileroVadConfig {
-    crate::delegate_method!(debug, bool);
-    crate::delegate_method!(sample_rate, i32);
-    crate::delegate_method!(num_threads, i32);
-    crate::delegate_method!(provider, &str);
 }
 
 impl AsRef<sherpa_rs_sys::SherpaOnnxVadModelConfig> for SileroVadConfig {

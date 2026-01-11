@@ -1,9 +1,12 @@
 use std::ffi::CString;
 
+use sherpa_rs_next_macro::FromBaseConfig;
+
 use crate::{as_c_string, asr::offline::AsrOfflineBaseConfig};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FromBaseConfig)]
 pub struct SenseVoiceAsrOfflineConfig {
+    #[base_config(path = "src/asr/offline/mod.rs")]
     base: AsrOfflineBaseConfig,
     model: Option<CString>,
     language: Option<CString>,
@@ -35,5 +38,3 @@ impl AsRef<sherpa_rs_sys::SherpaOnnxOfflineRecognizerConfig> for SenseVoiceAsrOf
         &self.base.config
     }
 }
-
-crate::delegate_all_base_config_methods!(SenseVoiceAsrOfflineConfig);

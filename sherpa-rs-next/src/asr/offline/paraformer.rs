@@ -1,14 +1,15 @@
 use std::ffi::CString;
 
+use sherpa_rs_next_macro::FromBaseConfig;
+
 use crate::{as_c_string, asr::offline::AsrOfflineBaseConfig};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FromBaseConfig)]
 pub struct ParaformerAsrOfflineConfig {
+    #[base_config(path = "src/asr/offline/mod.rs")]
     base: AsrOfflineBaseConfig,
     model: Option<CString>,
 }
-
-crate::delegate_all_base_config_methods!(ParaformerAsrOfflineConfig);
 
 impl ParaformerAsrOfflineConfig {
     pub fn with_model(&mut self, model: &str) -> &mut Self {

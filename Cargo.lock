@@ -783,7 +783,18 @@ dependencies = [
  "paste",
  "serde",
  "serde_json",
+ "sherpa-rs-next-macro",
  "sherpa-rs-sys",
+]
+
+[[package]]
+name = "sherpa-rs-next-macro"
+version = "0.1.0"
+dependencies = [
+ "paste",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

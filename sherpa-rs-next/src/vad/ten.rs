@@ -1,17 +1,13 @@
+use sherpa_rs_next_macro::FromBaseConfig;
+
 use crate::{as_c_string, vad::VadBaseConfig};
 use std::ffi::CString;
 
-#[derive(Debug)]
+#[derive(Debug, Default, FromBaseConfig)]
 pub struct TenVadConfig {
+    #[base_config(path = "src/vad/mod.rs")]
     base: VadBaseConfig,
     model: Option<CString>,
-}
-
-impl TenVadConfig {
-    crate::delegate_method!(debug, bool);
-    crate::delegate_method!(sample_rate, i32);
-    crate::delegate_method!(num_threads, i32);
-    crate::delegate_method!(provider, &str);
 }
 
 impl TenVadConfig {
@@ -45,15 +41,6 @@ impl TenVadConfig {
     pub fn with_window_size(&mut self, window_size: i32) -> &mut Self {
         self.base.config.ten_vad.window_size = window_size;
         self
-    }
-}
-
-impl Default for TenVadConfig {
-    fn default() -> Self {
-        Self {
-            base: VadBaseConfig::default(),
-            model: None,
-        }
     }
 }
 
