@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod offline;
+pub mod online;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RecognizerJsonResult {

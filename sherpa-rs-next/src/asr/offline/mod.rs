@@ -243,10 +243,8 @@ pub struct AsrOfflineRecognizer(*const sherpa_rs_sys::SherpaOnnxOfflineRecognize
 
 impl AsrOfflineRecognizer {
     pub fn create_with_config(config: AsrOfflineConfig) -> anyhow::Result<Self> {
-        let config_ptr: *const sherpa_rs_sys::SherpaOnnxOfflineRecognizerConfig =
-            (*config).as_ref();
-        let recognizer = unsafe { sherpa_rs_sys::SherpaOnnxCreateOfflineRecognizer(config_ptr) };
-        Ok(Self(recognizer))
+        let config = config.as_ref();
+        Self::create(config)
     }
 
     pub fn create<T>(config: T) -> anyhow::Result<Self>
