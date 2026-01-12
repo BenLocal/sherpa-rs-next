@@ -1,4 +1,5 @@
 pub mod asr;
+pub mod audio;
 pub mod vad;
 
 #[macro_export]

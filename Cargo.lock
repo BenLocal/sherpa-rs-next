@@ -28,7 +28,6 @@ name = "asr-offline"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hound",
  "sherpa-rs-next",
 ]
 
@@ -37,7 +36,6 @@ name = "asr-online"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hound",
  "sherpa-rs-next",
 ]
 
@@ -789,6 +787,7 @@ name = "sherpa-rs-next"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hound",
  "paste",
  "serde",
  "serde_json",

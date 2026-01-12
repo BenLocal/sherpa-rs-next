@@ -6,4 +6,3 @@ edition = "2024"
 [dependencies]
 sherpa-rs-next = { path = "../../sherpa-rs-next" }
 anyhow = "1.0"
-hound = { version = "3.5.1" }
