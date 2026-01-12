@@ -1,5 +1,6 @@
 pub mod asr;
 pub mod audio;
+pub mod tts;
 pub mod vad;
 
 #[macro_export]

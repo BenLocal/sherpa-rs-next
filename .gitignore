@@ -2,6 +2,7 @@
 
 sherpa-onnx-*
 /sherpa-onnx
+kokoro-multi-*
 
 
 /examples/target

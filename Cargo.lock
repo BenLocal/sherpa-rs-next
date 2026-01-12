@@ -929,6 +929,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tts-offline"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "sherpa-rs-next",
+]
+
+[[package]]
 name = "typenum"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
