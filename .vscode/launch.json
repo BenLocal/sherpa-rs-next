@@ -5,6 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug executable 'asr-online'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=asr-online",
+                    "--package=asr-online"
+                ]
+            },
+            "args": [
+                "${workspaceFolder}/motivation.wav",
+                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/encoder.int8.onnx",
+                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/decoder.int8.onnx",
+                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/tokens.txt"
+            ]
+        },
+        {
             "name": "Debug unit tests in library 'sherpa_rs_next'",
             "type": "lldb",
             "request": "launch",
@@ -16,14 +34,14 @@
             }
         },
         {
-            "name": "Debug executable 'asr-demo'",
+            "name": "Debug executable 'asr-offline'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "run",
-                    "--bin=asr-demo",
-                    "--package=asr-demo"
+                    "--bin=asr-offline",
+                    "--package=asr-offline"
                 ]
             },
             "args": [
@@ -38,18 +56,6 @@
             //     "${workspaceFolder}/sherpa-onnx-paraformer-zh-2024-03-09/model.int8.onnx",
             //     "${workspaceFolder}/sherpa-onnx-paraformer-zh-2024-03-09/tokens.txt"
             // ]
-        },
-        {
-            "name": "Debug unit tests in executable 'asr-demo'",
-            "type": "lldb",
-            "request": "launch",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--bin=asr-demo",
-                    "--package=asr-demo"
-                ]
-            }
         }
     ]
 }

@@ -1,8 +1,81 @@
-use std::cell::OnceCell;
+use std::{cell::OnceCell, ffi::CString};
 
-use crate::{asr::RecognizerJsonResult, const_ptr_to_string};
+use crate::{as_c_string, asr::RecognizerJsonResult, const_ptr_to_string};
+
+pub mod paraformer;
 
 pub type AsrOnlineConfig = Box<dyn AsRef<sherpa_rs_sys::SherpaOnnxOnlineRecognizerConfig>>;
+
+#[derive(Debug, Default)]
+pub struct AsrOnlineBaseConfig {
+    config: sherpa_rs_sys::SherpaOnnxOnlineRecognizerConfig,
+
+    model_provider: Option<CString>,
+    model_type: Option<CString>,
+    model_tokens: Option<CString>,
+}
+
+impl AsrOnlineBaseConfig {
+    pub fn with_model_debug(&mut self, debug: bool) -> &mut Self {
+        self.config.model_config.debug = if debug { 1 } else { 0 };
+        self
+    }
+
+    pub fn with_model_num_threads(&mut self, num_threads: i32) -> &mut Self {
+        self.config.model_config.num_threads = num_threads;
+        self
+    }
+
+    pub fn with_model_provider(&mut self, provider: &str) -> &mut Self {
+        let provider = as_c_string!(provider);
+        self.config.model_config.provider = provider.as_ptr();
+        self.model_provider = Some(provider);
+        self
+    }
+
+    pub fn with_model_type(&mut self, model_type: &str) -> &mut Self {
+        let model_type = as_c_string!(model_type);
+        self.config.model_config.model_type = model_type.as_ptr();
+        self.model_type = Some(model_type);
+        self
+    }
+
+    pub fn with_model_tokens(&mut self, tokens: &str) -> &mut Self {
+        let tokens = as_c_string!(tokens);
+        self.config.model_config.tokens = tokens.as_ptr();
+        self.model_tokens = Some(tokens);
+        self
+    }
+
+    pub fn with_enable_endpoint(&mut self, enable_endpoint: bool) -> &mut Self {
+        self.config.enable_endpoint = if enable_endpoint { 1 } else { 0 };
+        self
+    }
+
+    pub fn with_rule1_min_trailing_silence(
+        &mut self,
+        rule1_min_trailing_silence: f32,
+    ) -> &mut Self {
+        self.config.rule1_min_trailing_silence = rule1_min_trailing_silence;
+        self
+    }
+
+    pub fn with_rule2_min_trailing_silence(
+        &mut self,
+        rule2_min_trailing_silence: f32,
+    ) -> &mut Self {
+        self.config.rule2_min_trailing_silence = rule2_min_trailing_silence;
+        self
+    }
+
+    pub fn with_rule3_min_utterance_length(
+        &mut self,
+        rule3_min_utterance_length: f32,
+    ) -> &mut Self {
+        self.config.rule3_min_utterance_length = rule3_min_utterance_length;
+        self
+    }
+}
 
 pub struct AsrOnlineResult {
     json_value_cache: OnceCell<anyhow::Result<RecognizerJsonResult>>,
@@ -34,6 +107,14 @@ impl AsrOnlineResult {
 
     pub fn tokens(&self) -> &Vec<String> {
         &self.tokens
+    }
+
+    pub fn is_final(&self) -> bool {
+        self.is_final
+    }
+
+    pub fn segment_id(&self) -> i32 {
+        self.segment_id
     }
 }
 
