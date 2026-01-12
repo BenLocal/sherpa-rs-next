@@ -59,6 +59,8 @@ impl KokoroTTSConfig {
         self
     }
 
+    /// lexicon is a comma-separated list of lexicon files
+    /// e.g. "lexicon-us-en.txt,lexicon-zh.txt"
     pub fn with_lexicon(&mut self, lexicon: &str) -> &mut Self {
         let lexicon = as_c_string!(lexicon);
         self.base.config.model.kokoro.lexicon = lexicon.as_ptr();
@@ -66,10 +68,21 @@ impl KokoroTTSConfig {
         self
     }
 
+    pub fn with_lexicon_files(&mut self, lexicon_files: &[&str]) -> &mut Self {
+        let lexicon_files = lexicon_files.join(",");
+        self.with_lexicon(&lexicon_files)
+    }
+
     pub fn with_lang(&mut self, lang: &str) -> &mut Self {
         let lang = as_c_string!(lang);
         self.base.config.model.kokoro.lang = lang.as_ptr();
         self.lang = Some(lang);
         self
+    }
+}
+
+impl AsRef<sherpa_rs_sys::SherpaOnnxOfflineTtsConfig> for KokoroTTSConfig {
+    fn as_ref(&self) -> &sherpa_rs_sys::SherpaOnnxOfflineTtsConfig {
+        &self.base.config
     }
 }

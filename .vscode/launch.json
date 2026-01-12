@@ -5,6 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug executable 'tts-offline'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=tts-offline",
+                    "--package=tts-offline"
+                ]
+            },
+            "args": [
+                "${workspaceFolder}/kokoro-multi-lang-v1_0"
+            ]
+        },
+        {
             "name": "Debug executable 'asr-online'",
             "type": "lldb",
             "request": "launch",
