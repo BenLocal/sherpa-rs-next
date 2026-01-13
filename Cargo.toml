@@ -1,9 +1,10 @@
 [workspace]
 members = [
     "sherpa-rs-next",
+    "sherpa-rs-next-macro",
     "examples/asr-online",
     "examples/asr-offline",
     "examples/tts-offline",
-    "sherpa-rs-next-macro",
+    "examples/asr-app/src-tauri",
 ]
 resolver = "2"

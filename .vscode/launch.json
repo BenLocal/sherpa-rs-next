@@ -5,6 +5,41 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug Tauri App (asr-app) - Rust Backend",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--package=asr-app",
+                    "--manifest-path=examples/asr-app/src-tauri/Cargo.toml"
+                ],
+                "filter": {
+                    "name": "asr-app",
+                    "kind": "bin"
+                }
+            },
+            "cwd": "${workspaceFolder}/examples/asr-app/src-tauri",
+            "env": {
+                "TAURI_DEV": "1",
+                "TAURI_DEV_SERVER": "http://localhost:1420"
+            },
+            "preLaunchTask": "tauri: start frontend",
+            "console": "externalTerminal",
+            "sourceLanguages": [
+                "rust"
+            ]
+        },
+        {
+            "name": "Attach to Running Tauri App",
+            "type": "lldb",
+            "request": "attach",
+            "pid": "${command:pickProcess}",
+            "sourceLanguages": [
+                "rust"
+            ]
+        },
+        {
             "name": "Debug executable 'tts-offline'",
             "type": "lldb",
             "request": "launch",

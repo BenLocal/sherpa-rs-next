@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 const greetMsg = ref("");
 const name = ref("");
@@ -8,6 +9,62 @@ const name = ref("");
 async function greet() {
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   greetMsg.value = await invoke("greet", { name: name.value });
+}
+
+async function openTransparentWindow() {
+  try {
+    // 检查窗口是否已存在
+    try {
+      const existingWindow = await WebviewWindow.getByLabel(
+        "transparent_window"
+      );
+      if (existingWindow) {
+        await existingWindow.show();
+        await existingWindow.setFocus();
+        return;
+      }
+    } catch (e) {
+      // 窗口不存在，继续创建
+    }
+
+    // 使用前端 API 创建透明窗口（类似歌词面板）
+    // 横向布局，类似图片中的样式
+    // transparent.html 在根目录，Vite 可以直接访问
+    const isDev = import.meta.env.DEV;
+    const url = isDev
+      ? "http://localhost:1420/transparent.html"
+      : "tauri://localhost/transparent.html";
+
+    const webview = new WebviewWindow("transparent_window", {
+      url: url,
+      title: "歌词面板",
+      width: 800,
+      height: 180,
+      transparent: true,
+      decorations: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      x: 100,
+      y: 100,
+      visible: true,
+    });
+
+    webview.once("tauri://created", async () => {
+      try {
+        // 确保窗口显示
+        await webview.show();
+        await webview.setFocus();
+      } catch (e) {
+        // 静默处理错误
+      }
+    });
+
+    webview.once("tauri://error", () => {
+      // 静默处理错误
+    });
+  } catch (error) {
+    // 静默处理错误
+  }
 }
 </script>
 
@@ -33,6 +90,10 @@ async function greet() {
       <button type="submit">Greet</button>
     </form>
     <p>{{ greetMsg }}</p>
+
+    <div class="row" style="margin-top: 20px">
+      <button @click="openTransparentWindow">打开透明窗口</button>
+    </div>
   </main>
 </template>
 
@@ -44,7 +105,6 @@ async function greet() {
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #249b73);
 }
-
 </style>
 <style>
 :root {
@@ -156,5 +216,4 @@ button {
     background-color: #0f0f0f69;
   }
 }
-
 </style>
