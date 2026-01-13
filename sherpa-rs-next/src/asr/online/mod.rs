@@ -3,6 +3,8 @@ use std::{cell::OnceCell, ffi::CString};
 use crate::{as_c_string, asr::RecognizerJsonResult, const_ptr_to_string};
 
 pub mod paraformer;
+pub mod zipformer;
+pub mod zipformer_ctc;
 
 pub type AsrOnlineConfig = Box<dyn AsRef<sherpa_rs_sys::SherpaOnnxOnlineRecognizerConfig>>;
 
@@ -13,6 +15,7 @@ pub struct AsrOnlineBaseConfig {
     model_provider: Option<CString>,
     model_type: Option<CString>,
     model_tokens: Option<CString>,
+    decoding_method: Option<CString>,
 }
 
 impl AsrOnlineBaseConfig {
@@ -44,6 +47,13 @@ impl AsrOnlineBaseConfig {
         let tokens = as_c_string!(tokens);
         self.config.model_config.tokens = tokens.as_ptr();
         self.model_tokens = Some(tokens);
+        self
+    }
+
+    pub fn with_decoding_method(&mut self, decoding_method: &str) -> &mut Self {
+        let decoding_method = as_c_string!(decoding_method);
+        self.config.decoding_method = decoding_method.as_ptr();
+        self.decoding_method = Some(decoding_method);
         self
     }
 
@@ -215,8 +225,7 @@ impl AsrOnlineRecognizer {
                 sherpa_rs_sys::SherpaOnnxGetOnlineStreamResult(self.recognizer, self.stream);
             let raw_result = result_ptr.read();
             let mut result = AsrOnlineResult::from(raw_result);
-            sherpa_rs_sys::SherpaOnnxDestroyOnlineRecognizerResult(result_ptr);
-
+           
             if sherpa_rs_sys::SherpaOnnxOnlineStreamIsEndpoint(self.recognizer, self.stream) == 1 {
                 self.segment_id += 1;
                 sherpa_rs_sys::SherpaOnnxOnlineStreamReset(self.recognizer, self.stream);
@@ -224,6 +233,7 @@ impl AsrOnlineRecognizer {
             }
 
             result.segment_id = self.segment_id;
+            sherpa_rs_sys::SherpaOnnxDestroyOnlineRecognizerResult(result_ptr);
             Ok(result)
         }
     }

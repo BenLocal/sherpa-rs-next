@@ -31,11 +31,26 @@
                 ]
             },
             "args": [
-                "${workspaceFolder}/motivation.wav",
-                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/encoder.int8.onnx",
-                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/decoder.int8.onnx",
-                "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/tokens.txt"
+                "zipformer",
+                "${workspaceFolder}/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/test_wavs/0.wav",
+                "${workspaceFolder}/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/encoder-epoch-99-avg-1.onnx",
+                "${workspaceFolder}/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/decoder-epoch-99-avg-1.onnx",
+                "${workspaceFolder}/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/joiner-epoch-99-avg-1.onnx",
+                "${workspaceFolder}/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/tokens.txt"
             ]
+            // "args": [
+            //     "zipformer_ctc",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-zipformer-ctc-multi-zh-hans-2023-12-13/test_wavs/TEST_MEETING_T0000000219.wav",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-zipformer-ctc-multi-zh-hans-2023-12-13/ctc-epoch-20-avg-1-chunk-16-left-128.onnx",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-zipformer-ctc-multi-zh-hans-2023-12-13/tokens.txt"
+            // ]
+            // "args": [
+            //     "paraformer",
+            //     "${workspaceFolder}/motivation.wav",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/encoder.int8.onnx",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/decoder.int8.onnx",
+            //     "${workspaceFolder}/sherpa-onnx-streaming-paraformer-bilingual-zh-en/tokens.txt"
+            // ]
         },
         {
             "name": "Debug unit tests in library 'sherpa_rs_next'",
