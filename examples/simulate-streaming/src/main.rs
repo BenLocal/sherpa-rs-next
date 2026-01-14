@@ -40,7 +40,8 @@ fn main() -> anyhow::Result<()> {
         .with_max_speech_duration(8.0)
         .with_window_size(512)
         .with_sample_rate(16000)
-        .with_threshold(0.5);
+        .with_threshold(0.5)
+        .with_num_threads(2);
 
     let mut vad = Vad::create(vad_config, 20.0)?;
 
@@ -50,7 +51,8 @@ fn main() -> anyhow::Result<()> {
         .with_model_tokens(&tokens)
         .with_language("auto")
         .with_use_itn(true)
-        .with_model_debug(true);
+        .with_model_debug(true)
+        .with_model_num_threads(2);
 
     let recognizer = AsrOfflineRecognizer::create(recognizer_config)?;
 
@@ -58,7 +60,7 @@ fn main() -> anyhow::Result<()> {
     let target_sample_rate = 16000.0;
     println!("Target sample rate: {} Hz", target_sample_rate);
 
-    input_device_sender(audio_tx, device_id)?;
+    let stream = input_device_sender(audio_tx, device_id)?;
 
     // Audio processing loop
     let window_size = 512;
@@ -166,13 +168,15 @@ fn main() -> anyhow::Result<()> {
     }
 
     println!("\nStopped.");
+
+    drop(stream);
     Ok(())
 }
 
 fn input_device_sender(
     audio_tx: mpsc::Sender<AudioFrame>,
     device_id: Option<String>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<cpal::platform::Stream> {
     let host = cpal::default_host();
     let device = if let Some(device_id) = device_id {
         host.input_devices()?
@@ -291,7 +295,7 @@ fn input_device_sender(
 
     stream.play()?;
     println!("Started! Please speak\n");
-    Ok(())
+    Ok(stream)
 }
 
 fn resample_audio(samples: Vec<f32>, sample_rate: f32, target_sample_rate: f32) -> Vec<f32> {
