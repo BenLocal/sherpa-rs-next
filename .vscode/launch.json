@@ -19,7 +19,6 @@
                 "${workspaceFolder}/silero_vad.onnx",
                 "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx",
                 "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt",
-                "input"
             ]
         },
         {
