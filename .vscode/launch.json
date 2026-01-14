@@ -5,6 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug executable 'simulate-streaming'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=simulate-streaming",
+                    "--package=simulate-streaming"
+                ]
+            },
+            "args": [
+                "${workspaceFolder}/silero_vad.onnx",
+                "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx",
+                "${workspaceFolder}/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt",
+                "input"
+            ]
+        },
+        {
             "name": "Debug Tauri App (asr-app) - Rust Backend",
             "type": "lldb",
             "request": "launch",
