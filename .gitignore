@@ -1,8 +1,9 @@
 /target
 
 sherpa-onnx-*
-/sherpa-onnx
+silero_vad.onnx
 kokoro-multi-*
+/sherpa-onnx
 
 
 /examples/target

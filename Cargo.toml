@@ -5,6 +5,7 @@ members = [
     "examples/asr-online",
     "examples/asr-offline",
     "examples/tts-offline",
-    "examples/asr-app/src-tauri",
+    "examples/simulate-streaming",
+    # "examples/asr-app/src-tauri",
 ]
 resolver = "2"

@@ -5,6 +5,8 @@ use crate::as_c_string;
 pub mod silero;
 pub mod ten;
 
+pub type VadConfig = Box<dyn AsRef<sherpa_rs_sys::SherpaOnnxVadModelConfig>>;
+
 #[derive(Debug, Default)]
 pub struct VadBaseConfig {
     config: sherpa_rs_sys::SherpaOnnxVadModelConfig,
@@ -44,6 +46,14 @@ pub struct SpeechSegment {
 pub struct Vad(*const sherpa_rs_sys::SherpaOnnxVoiceActivityDetector);
 
 impl Vad {
+    pub fn create_with_config(
+        config: VadConfig,
+        buffer_size_in_seconds: f32,
+    ) -> anyhow::Result<Self> {
+        let config = config.as_ref();
+        Self::create(config, buffer_size_in_seconds)
+    }
+
     pub fn create<T>(config: T, buffer_size_in_seconds: f32) -> anyhow::Result<Self>
     where
         T: AsRef<sherpa_rs_sys::SherpaOnnxVadModelConfig>,
