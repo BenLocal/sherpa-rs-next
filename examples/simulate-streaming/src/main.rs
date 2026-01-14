@@ -7,6 +7,11 @@ use sherpa_rs_next::{
     vad::{Vad, silero::SileroVadConfig},
 };
 
+struct AudioFrame {
+    samples: Vec<f32>,
+    sample_rate: f32,
+}
+
 fn main() -> anyhow::Result<()> {
     let vad_model = std::env::args()
         .nth(1)
@@ -17,6 +22,10 @@ fn main() -> anyhow::Result<()> {
     let tokens = std::env::args()
         .nth(3)
         .expect("Missing tokens path argument");
+    let device_type = std::env::args()
+        .nth(4)
+        .expect("Missing device type argument");
+    let device_id = std::env::args().nth(5);
 
     let (stop_tx, stop_rx) = mpsc::channel();
     ctrlc::set_handler(move || {
@@ -47,104 +56,18 @@ fn main() -> anyhow::Result<()> {
         .with_model_debug(true);
 
     let recognizer = AsrOfflineRecognizer::create(recognizer_config)?;
-    let host = cpal::default_host();
-    let device = host
-        .default_input_device()
-        .ok_or("No input device available")
-        .map_err(|e| anyhow::anyhow!("No input device available: {}", e))?;
-    // Get device info
-    let device_id = device.id()?;
-    println!("Using input device: {:?}", device_id);
 
-    // Get default input config
-    let config = device.default_input_config()?;
-    let mic_sample_rate = config.sample_rate() as f32;
+    let (audio_tx, audio_rx) = mpsc::channel::<AudioFrame>();
     let target_sample_rate = 16000.0;
-    let channels = config.channels() as usize;
-
-    println!("Device sample rate: {} Hz", mic_sample_rate);
     println!("Target sample rate: {} Hz", target_sample_rate);
-    println!("Channels: {}", channels);
 
-    let (audio_tx, audio_rx) = mpsc::channel::<Vec<f32>>();
-    let err_fn = |err| eprintln!("Error occurred on stream: {}", err);
-    let stream = match config.sample_format() {
-        cpal::SampleFormat::F32 => {
-            let channels = channels;
-            device.build_input_stream(
-                &config.into(),
-                move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                    // Convert to mono by averaging channels
-                    let mono_samples: Vec<f32> = if channels > 1 {
-                        data.chunks(channels)
-                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
-                            .collect()
-                    } else {
-                        data.to_vec()
-                    };
-                    if audio_tx.send(mono_samples).is_err() {
-                        // Channel closed, stop sending
-                    }
-                },
-                err_fn,
-                None,
-            )?
-        }
-        cpal::SampleFormat::I16 => {
-            let channels = channels;
-            device.build_input_stream(
-                &config.into(),
-                move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                    // Convert to f32 and then to mono
-                    let f32_samples: Vec<f32> =
-                        data.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
-                    let mono_samples: Vec<f32> = if channels > 1 {
-                        f32_samples
-                            .chunks(channels)
-                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
-                            .collect()
-                    } else {
-                        f32_samples
-                    };
-                    if audio_tx.send(mono_samples).is_err() {
-                        // Channel closed, stop sending
-                    }
-                },
-                err_fn,
-                None,
-            )?
-        }
-        cpal::SampleFormat::U16 => {
-            let channels = channels;
-            device.build_input_stream(
-                &config.into(),
-                move |data: &[u16], _: &cpal::InputCallbackInfo| {
-                    // Convert to f32 and then to mono
-                    let f32_samples: Vec<f32> = data
-                        .iter()
-                        .map(|&s| (s as f32 / u16::MAX as f32) * 2.0 - 1.0)
-                        .collect();
-                    let mono_samples: Vec<f32> = if channels > 1 {
-                        f32_samples
-                            .chunks(channels)
-                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
-                            .collect()
-                    } else {
-                        f32_samples
-                    };
-                    if audio_tx.send(mono_samples).is_err() {
-                        // Channel closed, stop sending
-                    }
-                },
-                err_fn,
-                None,
-            )?
-        }
-        _ => return Err(anyhow::anyhow!("Unsupported sample format")),
-    };
-
-    stream.play()?;
-    println!("Started! Please speak\n");
+    if device_type == "input" {
+        input_device_sender(audio_tx, device_id)?;
+    } else if device_type == "output" {
+        output_device_sender(audio_tx, device_id)?;
+    } else {
+        anyhow::bail!("Invalid device type");
+    }
 
     // Audio processing loop
     let window_size = 512;
@@ -164,33 +87,9 @@ fn main() -> anyhow::Result<()> {
         // Receive audio samples
         match audio_rx.try_recv() {
             Ok(samples) => {
-                // Handle resampling if needed
-                if (mic_sample_rate - target_sample_rate).abs() > 1.0 {
-                    // Simple linear interpolation resampling
-                    let ratio = target_sample_rate / mic_sample_rate;
-                    let output_len = (samples.len() as f32 * ratio) as usize;
-                    let mut resampled = Vec::with_capacity(output_len);
-
-                    for i in 0..output_len {
-                        let src_pos = i as f32 / ratio;
-                        let src_idx = src_pos as usize;
-                        let frac = src_pos - src_idx as f32;
-
-                        if src_idx + 1 < samples.len() {
-                            // Linear interpolation
-                            let sample =
-                                samples[src_idx] * (1.0 - frac) + samples[src_idx + 1] * frac;
-                            resampled.push(sample);
-                        } else if src_idx < samples.len() {
-                            resampled.push(samples[src_idx]);
-                        } else {
-                            resampled.push(0.0);
-                        }
-                    }
-                    buffer.extend_from_slice(&resampled);
-                } else {
-                    buffer.extend_from_slice(&samples);
-                }
+                let samples =
+                    resample_audio(samples.samples, samples.sample_rate, target_sample_rate);
+                buffer.extend_from_slice(&samples);
             }
             Err(mpsc::TryRecvError::Empty) => {
                 // No data available, continue
@@ -277,4 +176,334 @@ fn main() -> anyhow::Result<()> {
 
     println!("\nStopped.");
     Ok(())
+}
+
+fn output_device_sender(
+    audio_tx: mpsc::Sender<AudioFrame>,
+    device_id: Option<String>,
+) -> anyhow::Result<()> {
+    let host = cpal::default_host();
+    
+    // First, find the target output device
+    let output_device = if let Some(device_id) = device_id {
+        host.output_devices()?
+            .find(|device| {
+                #[allow(deprecated)]
+                device.name().map(|n| n == device_id).unwrap_or(false)
+            })
+            .ok_or_else(|| anyhow::anyhow!("Output device '{}' not found", device_id))?
+    } else {
+        host.default_output_device()
+            .ok_or_else(|| anyhow::anyhow!("No output device available"))?
+    };
+    
+    // Get the output device name to find its monitor source
+    #[allow(deprecated)]
+    let output_device_name = output_device.name()?;
+    let output_device_id = output_device.id()?;
+    println!("Target output device: {} ({:?})", output_device_name, output_device_id);
+    
+    // Find the monitor source (input device) that corresponds to this output device
+    // On PulseAudio, monitor sources are typically named like "Monitor of <output device name>"
+    let monitor_device = host
+        .input_devices()?
+        .find(|device| {
+            #[allow(deprecated)]
+            if let Ok(name) = device.name() {
+                let name_lower = name.to_lowercase();
+                // Check if this is a monitor source for our output device
+                name_lower.contains("monitor") && 
+                (name_lower.contains(&output_device_name.to_lowercase()) || 
+                 name_lower.contains("default") ||
+                 name_lower.contains("pulse"))
+            } else {
+                false
+            }
+        })
+        .or_else(|| {
+            // Fallback: try to find any monitor device
+            host.input_devices()
+                .ok()
+                .and_then(|devices| {
+                    devices
+                        .filter_map(|d| {
+                            #[allow(deprecated)]
+                            let name = d.name().ok()?;
+                            if name.to_lowercase().contains("monitor") {
+                                Some(d)
+                            } else {
+                                None
+                            }
+                        })
+                        .next()
+                })
+        })
+        .ok_or_else(|| anyhow::anyhow!(
+            "No monitor source found for output device '{}'. Make sure PulseAudio is running and monitor sources are available.", 
+            output_device_name
+        ))?;
+    
+    #[allow(deprecated)]
+    let monitor_name = monitor_device.name()?;
+    let monitor_id = monitor_device.id()?;
+    println!("Using monitor source: {} ({:?})", monitor_name, monitor_id);
+
+    // Get default input config from the monitor device
+    let config = monitor_device.default_input_config()?;
+    let sample_rate = config.sample_rate() as f32;
+    let channels = config.channels() as usize;
+
+    println!("Monitor sample rate: {} Hz", sample_rate);
+    println!("Channels: {}", channels);
+
+    let err_fn = |err| eprintln!("Error occurred on stream: {}", err);
+    let stream = match config.sample_format() {
+        cpal::SampleFormat::F32 => {
+            let channels = channels;
+            monitor_device.build_input_stream(
+                &config.into(),
+                move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                    // Convert to mono by averaging channels
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        data.chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        data.to_vec()
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        cpal::SampleFormat::I16 => {
+            let channels = channels;
+            monitor_device.build_input_stream(
+                &config.into(),
+                move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                    // Convert to f32 and then to mono
+                    let f32_samples: Vec<f32> =
+                        data.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        f32_samples
+                            .chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        f32_samples
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        cpal::SampleFormat::U16 => {
+            let channels = channels;
+            monitor_device.build_input_stream(
+                &config.into(),
+                move |data: &[u16], _: &cpal::InputCallbackInfo| {
+                    // Convert to f32 and then to mono
+                    let f32_samples: Vec<f32> = data
+                        .iter()
+                        .map(|&s| (s as f32 / u16::MAX as f32) * 2.0 - 1.0)
+                        .collect();
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        f32_samples
+                            .chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        f32_samples
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        _ => return Err(anyhow::anyhow!("Unsupported sample format")),
+    };
+
+    stream.play()?;
+    println!("Started capturing output audio from '{}' for transcription\n", output_device_name);
+    Ok(())
+}
+
+fn input_device_sender(
+    audio_tx: mpsc::Sender<AudioFrame>,
+    device_id: Option<String>,
+) -> anyhow::Result<()> {
+    let host = cpal::default_host();
+    let device = if let Some(device_id) = device_id {
+        host.input_devices()?
+            .find(|device| device.description().unwrap().name() == device_id)
+            .ok_or_else(|| anyhow::anyhow!("Input device not found"))?
+    } else {
+        host.default_input_device()
+            .ok_or_else(|| anyhow::anyhow!("No input device available"))?
+    };
+    // Get device info
+    let device_id = device.id()?;
+    println!("Using input device: {:?}", device_id);
+
+    // Get default input config
+    let config = device.default_input_config()?;
+    let mic_sample_rate = config.sample_rate() as f32;
+
+    let channels = config.channels() as usize;
+
+    println!("Device sample rate: {} Hz", mic_sample_rate);
+    println!("Channels: {}", channels);
+
+    let err_fn = |err| eprintln!("Error occurred on stream: {}", err);
+    let stream = match config.sample_format() {
+        cpal::SampleFormat::F32 => {
+            let channels = channels;
+            device.build_input_stream(
+                &config.into(),
+                move |data: &[f32], _: &cpal::InputCallbackInfo| {
+                    // Convert to mono by averaging channels
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        data.chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        data.to_vec()
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate: mic_sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        cpal::SampleFormat::I16 => {
+            let channels = channels;
+            device.build_input_stream(
+                &config.into(),
+                move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                    // Convert to f32 and then to mono
+                    let f32_samples: Vec<f32> =
+                        data.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        f32_samples
+                            .chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        f32_samples
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate: mic_sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        cpal::SampleFormat::U16 => {
+            let channels = channels;
+            device.build_input_stream(
+                &config.into(),
+                move |data: &[u16], _: &cpal::InputCallbackInfo| {
+                    // Convert to f32 and then to mono
+                    let f32_samples: Vec<f32> = data
+                        .iter()
+                        .map(|&s| (s as f32 / u16::MAX as f32) * 2.0 - 1.0)
+                        .collect();
+                    let mono_samples: Vec<f32> = if channels > 1 {
+                        f32_samples
+                            .chunks(channels)
+                            .map(|chunk| chunk.iter().sum::<f32>() / channels as f32)
+                            .collect()
+                    } else {
+                        f32_samples
+                    };
+                    if audio_tx
+                        .send(AudioFrame {
+                            samples: mono_samples,
+                            sample_rate: mic_sample_rate,
+                        })
+                        .is_err()
+                    {
+                        // Channel closed, stop sending
+                    }
+                },
+                err_fn,
+                None,
+            )?
+        }
+        _ => return Err(anyhow::anyhow!("Unsupported sample format")),
+    };
+
+    stream.play()?;
+    println!("Started! Please speak\n");
+    Ok(())
+}
+
+fn resample_audio(samples: Vec<f32>, sample_rate: f32, target_sample_rate: f32) -> Vec<f32> {
+    if (sample_rate - target_sample_rate).abs() > 1.0 {
+        // Simple linear interpolation resampling
+        let ratio = target_sample_rate / sample_rate;
+        let output_len = (samples.len() as f32 * ratio) as usize;
+        let mut resampled = Vec::with_capacity(output_len);
+
+        for i in 0..output_len {
+            let src_pos = i as f32 / ratio;
+            let src_idx = src_pos as usize;
+            let frac = src_pos - src_idx as f32;
+
+            if src_idx + 1 < samples.len() {
+                // Linear interpolation
+                let sample = samples[src_idx] * (1.0 - frac) + samples[src_idx + 1] * frac;
+                resampled.push(sample);
+            } else if src_idx < samples.len() {
+                resampled.push(samples[src_idx]);
+            } else {
+                resampled.push(0.0);
+            }
+        }
+        resampled
+    } else {
+        samples
+    }
 }
