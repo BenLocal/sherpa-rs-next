@@ -139,7 +139,7 @@ impl From<sherpa_rs_sys::SherpaOnnxOnlineRecognizerResult> for AsrOnlineResult {
         };
         let mut tokens_owned = Vec::with_capacity(value.count as usize);
         if !value.tokens.is_null() && value.count > 0 {
-            let mut next_token: *const i8 = value.tokens;
+            let mut next_token: *const std::os::raw::c_char = value.tokens;
             for _ in 0..value.count {
                 let token = unsafe { std::ffi::CStr::from_ptr(next_token) };
                 tokens_owned.push(token.to_string_lossy().into_owned());

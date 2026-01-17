@@ -16,7 +16,7 @@ macro_rules! as_c_string {
 #[macro_export]
 macro_rules! const_ptr_to_string {
     ($a:ident) => {
-        std::ffi::CStr::from_ptr($a).to_string_lossy().into_owned()
+        unsafe { std::ffi::CStr::from_ptr($a).to_string_lossy().into_owned() }
     };
     ($a:expr) => {
         unsafe { std::ffi::CStr::from_ptr($a).to_string_lossy().into_owned() }
@@ -29,7 +29,7 @@ macro_rules! const_ptr_to_string {
         }
     };
     ($a:expr, $def:expr) => {{
-        let ptr: *const i8 = $a as *const i8;
+        let ptr = $a as *const std::os::raw::c_char;
         if ptr.is_null() {
             $def
         } else {
